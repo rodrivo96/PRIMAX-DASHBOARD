@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Primax — SEMMAQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root{
+  --bg:#F4F6FA;--bg2:#FFFFFF;--bg3:#EEF1F8;
+  --border:#DDE2EE;--text:#1A1F36;--text2:#5A6380;--text3:#9AA3BF;
+  --red:#D93025;--red-bg:#FEF0EF;
+  --blue:#1A73E8;--blue-bg:#EAF2FF;
+  --green:#1E8C5A;--green-bg:#E6F7F0;
+  --amber:#C47D00;--amber-bg:#FFF8E6;
+  --purple:#6B3FA0;--purple-bg:#F2ECFF;
+  --teal:#0E7C7B;--teal-bg:#E6F7F7;
+  --radius:8px;--radius-lg:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 8px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;line-height:1.5;min-height:100vh}
+
+/* UPLOAD */
+#uploadScreen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;background:linear-gradient(135deg,#F4F6FA 0%,#E8EEFF 100%)}
+.brand-row{display:flex;align-items:center;gap:10px}
+.red-pill{background:var(--red);color:#fff;font-size:12px;font-weight:600;padding:4px 12px;border-radius:5px;letter-spacing:.8px}
+.brand-txt{font-size:12px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;font-weight:500}
+.up-card{background:#fff;border:1.5px dashed var(--border);border-radius:var(--radius-lg);padding:2.5rem 3.5rem;text-align:center;max-width:440px;width:100%;cursor:pointer;transition:border-color .2s,box-shadow .2s;box-shadow:var(--shadow)}
+.up-card:hover{border-color:var(--blue);box-shadow:0 4px 20px rgba(26,115,232,.12)}
+.up-card.dragover{border-color:var(--blue);background:var(--blue-bg)}
+.up-icon{width:52px;height:52px;background:var(--blue-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem}
+.up-icon svg{width:26px;height:26px;stroke:var(--blue);stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.up-card h2{font-size:17px;font-weight:600;margin-bottom:6px}
+.up-card p{font-size:12px;color:var(--text2);margin-bottom:1.25rem}
+.up-btn{background:var(--blue);color:#fff;border:none;border-radius:var(--radius);padding:9px 22px;font-size:13px;font-family:'Inter',sans-serif;font-weight:500;cursor:pointer}
+.up-btn:hover{opacity:.88}
+.up-note{font-size:11px;color:var(--text3);margin-top:10px}
+#fileInput{display:none}
+
+/* TOPBAR */
+#dashboard{display:none;min-height:100vh;background:var(--bg)}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-title{font-size:14px;font-weight:600}
+.topbar-sub{font-size:11px;color:var(--text3)}
+.fecha-chip{font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text2)}
+.chg-btn{background:#fff;border:1px solid var(--border);color:var(--text2);border-radius:var(--radius);padding:5px 12px;font-size:12px;font-family:'Inter',sans-serif;cursor:pointer}
+.chg-btn:hover{background:var(--bg3)}
+
+/* LAYOUT */
+.wrap{max-width:1280px;margin:0 auto;padding:0 2rem}
+
+/* MÉTRICAS */
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:1.25rem 0 1rem}
+.mc{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.1rem;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.mc::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+.mc.ct::after{background:#9AA3BF}.mc.cd::after{background:var(--green)}
+.mc.cp::after{background:var(--blue)}.mc.cpl::after{background:var(--amber)}.mc.csb::after{background:var(--red)}
+.mc-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px}
+.mc-val{font-size:30px;font-weight:300;line-height:1;color:var(--text);margin-bottom:3px}
+.mc.cd .mc-val{color:var(--green)}.mc.cp .mc-val{color:var(--blue)}
+.mc.cpl .mc-val{color:var(--amber)}.mc.csb .mc-val{color:var(--red)}
+.mc-sub{font-size:10px;color:var(--text3)}
+
+/* FILTROS */
+.filter-bar{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:.85rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;box-shadow:var(--shadow)}
+.filter-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.filter-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.pill{font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text2);font-family:'Inter',sans-serif;font-weight:500;transition:all .15s}
+.pill:hover{border-color:var(--blue);color:var(--blue)}
+.pill.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.fsep{width:1px;height:28px;background:var(--border)}
+
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:210px 210px 1fr;gap:10px;margin-bottom:1rem}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem 1.25rem;box-shadow:var(--shadow)}
+.card-ttl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:.85rem}
+.ch-wrap{position:relative;width:100%;height:160px}
+.legend{display:flex;flex-wrap:wrap;gap:5px 12px;margin-top:8px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2)}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* BARRAS */
+.prog-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.prog-item{margin-bottom:9px}
+.prog-hdr{display:flex;justify-content:space-between;margin-bottom:3px}
+.prog-name{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:78%}
+.prog-pct{font-size:10px;color:var(--text2)}
+.prog-track{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px}
+.empty-msg{font-size:12px;color:var(--text3);padding:.5rem 0}
+
+/* TABLA */
+.tbl-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1.5rem;box-shadow:var(--shadow)}
+.tbl-hdr{padding:.85rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.tbl-ttl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)}
+.tbl-count{font-size:12px;font-weight:600;color:var(--blue)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{text-align:left;padding:8px 12px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap;background:#FAFBFF}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#F7F9FF}
+tbody td{padding:8px 12px;vertical-align:middle}
+.td-est{font-weight:500;white-space:nowrap}
+.td-srv{color:var(--text2);font-size:11px;max-width:170px}
+.td-obs{color:var(--text3);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-num{font-size:11px;color:var(--text2);text-align:center}
+.bdg{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;display:inline-block;white-space:nowrap}
+.b-done{background:var(--green-bg);color:var(--green)}
+.b-proc{background:var(--blue-bg);color:var(--blue)}
+.b-plan{background:var(--amber-bg);color:var(--amber)}
+.b-sb{background:var(--red-bg);color:var(--red)}
+.b-glp{background:var(--purple-bg);color:var(--purple)}
+.b-inf{background:var(--teal-bg);color:var(--teal)}
+.mini-p{display:flex;align-items:center;gap:6px;min-width:90px}
+.mini-track{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.mini-fill{height:100%;border-radius:2px}
+.mini-pct{font-size:10px;color:var(--text2);min-width:26px;text-align:right}
+
+/* LOGIN */
+#loginScreen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;background:linear-gradient(135deg,#F4F6FA 0%,#E8EEFF 100%)}
+.login-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:2.5rem 3rem;max-width:380px;width:100%;box-shadow:var(--shadow);text-align:center}
+.login-card h2{font-size:18px;font-weight:600;margin-bottom:6px}
+.login-card p{font-size:12px;color:var(--text2);margin-bottom:1.5rem}
+.login-input{width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text);outline:none;transition:border-color .15s;margin-bottom:10px}
+.login-input:focus{border-color:var(--blue)}
+.login-btn{width:100%;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);padding:10px;font-size:14px;font-family:'Inter',sans-serif;font-weight:500;cursor:pointer;transition:opacity .15s}
+.login-btn:hover{opacity:.88}
+.login-err{font-size:12px;color:var(--red);margin-top:6px;min-height:18px}
+.sem{width:13px;height:13px;border-radius:50%;display:inline-block;flex-shrink:0;box-shadow:0 0 0 2px rgba(0,0,0,.1)}
+.sem-v{background:#1E8C5A}.sem-a{background:#F5B800}.sem-r{background:#D93025}.sem-g{background:#C5CAD8}
+.sem-panel{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.sem-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:.9rem 1rem;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.sem-circle{width:42px;height:42px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}
+.sc-v{background:#E6F7F0}.sc-a{background:#FFF8E0}.sc-r{background:#FEF0EF}.sc-g{background:#F1F3F8}
+.sem-val{font-size:24px;font-weight:300;line-height:1}
+.sv{color:#1E8C5A}.sa{color:#C47D00}.sr{color:#D93025}.sg{color:#9AA3BF}
+.sem-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text3);margin-top:3px}
+.prog-row{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.prog-row .prog-name{flex:1;min-width:0}
+
+@media(max-width:1000px){
+  .charts-row{grid-template-columns:1fr 1fr}
+  .charts-row .bar-card{grid-column:1/-1}
+  .metrics{grid-template-columns:repeat(3,1fr)}
+  .prog-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .charts-row{grid-template-columns:1fr}
+  .wrap{padding:0 1rem}
+  .topbar{padding:0 1rem}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="brand-row">
+    <span class="red-pill">PRIMAX</span>
+    <span class="brand-txt">SEMMAQ · Dashboard Semanal</span>
+  </div>
+  <div class="login-card">
+    <div style="width:48px;height:48px;background:var(--blue-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A73E8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h2>Acceso restringido</h2>
+    <p>Ingresa la contraseña para ver el dashboard</p>
+    <input class="login-input" type="password" id="pwdInput" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkLogin()">
+    <button class="login-btn" onclick="checkLogin()">Ingresar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- UPLOAD -->
+<div id="uploadScreen" style="display:none">
+  <div class="brand-row">
+    <span class="red-pill">PRIMAX</span>
+    <span class="brand-txt">SEMMAQ · Dashboard Semanal</span>
+  </div>
+  <div class="up-card" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="up-icon">
+      <svg viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><polyline points="7 9 12 4 17 9"/><line x1="12" y1="4" x2="12" y2="16"/></svg>
+    </div>
+    <h2>Cargar reporte semanal</h2>
+    <p>Arrastra tu Excel aquí o haz clic para seleccionarlo.</p>
+    <button class="up-btn" onclick="event.stopPropagation();document.getElementById('fileInput').click()">Seleccionar archivo .xlsx</button>
+    <p class="up-note">REU_PRIMAX_[fecha].xlsx</p>
+  </div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="loadFile(this.files[0])">
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="red-pill">PRIMAX</span>
+      <div>
+        <div class="topbar-title">Seguimiento de Proyectos</div>
+        <div class="topbar-sub">SEMMAQ Oil &amp; Gas</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="fecha-chip" id="fechaChip">—</span>
+      <button class="chg-btn" onclick="resetDashboard()">↑ Cambiar Excel</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="metrics">
+      <div class="mc ct"><div class="mc-lbl">Total</div><div class="mc-val" id="m0">—</div><div class="mc-sub">proyectos</div></div>
+      <div class="mc cd"><div class="mc-lbl">Terminados</div><div class="mc-val" id="m1">—</div><div class="mc-sub" id="m1s">—</div></div>
+      <div class="mc cp"><div class="mc-lbl">En proceso</div><div class="mc-val" id="m2">—</div><div class="mc-sub" id="m2s">—</div></div>
+      <div class="mc cpl"><div class="mc-lbl">Planificación</div><div class="mc-val" id="m3">—</div><div class="mc-sub" id="m3s">—</div></div>
+      <div class="mc csb"><div class="mc-lbl">Stand By</div><div class="mc-val" id="m4">—</div><div class="mc-sub">requiere atención</div></div>
+    </div>
+
+    <!-- FILTROS ENCADENADOS -->
+    <div class="filter-bar">
+      <div class="filter-group" id="areaGroup">
+        <span class="filter-lbl">Área</span>
+        <button class="pill active" onclick="setFilter('area','todos',this)">Todos</button>
+        <button class="pill" onclick="setFilter('area','GLP',this)">GLP</button>
+        <button class="pill" onclick="setFilter('area','INFRAESTRUCTURA',this)">Infraestructura</button>
+      </div>
+      <div class="fsep"></div>
+      <div class="filter-group" id="estadoGroup">
+        <span class="filter-lbl">Estado</span>
+        <button class="pill active" onclick="setFilter('estado','todos',this)">Todos</button>
+        <button class="pill" onclick="setFilter('estado','EN PROCESO',this)">En proceso</button>
+        <button class="pill" onclick="setFilter('estado','TERMINADO',this)">Terminado</button>
+        <button class="pill" onclick="setFilter('estado','PLANIFICACIÓN',this)">Planificación</button>
+        <button class="pill" onclick="setFilter('estado','STAND BY',this)">Stand By</button>
+      </div>
+    </div>
+
+    <!-- SEMÁFORO RESUMEN -->
+    <div class="sem-panel" id="semPanel" style="grid-template-columns:repeat(3,1fr)">
+      <div class="sem-card"><div class="sem-circle sc-v">🟢</div><div><div class="sem-val sv" id="s-verde">—</div><div class="sem-lbl">Al día (desfase 0%)</div></div></div>
+      <div class="sem-card"><div class="sem-circle sc-a">🟡</div><div><div class="sem-val sa" id="s-amarillo">—</div><div class="sem-lbl">Leve retraso (1–4%)</div></div></div>
+      <div class="sem-card"><div class="sem-circle sc-r">🔴</div><div><div class="sem-val sr" id="s-rojo">—</div><div class="sem-lbl">Retraso crítico (≥5%)</div></div></div>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <div class="charts-row" style="grid-template-columns:210px 1fr">
+      <div class="card">
+        <div class="card-ttl" id="areaCardTtl">Por área</div>
+        <div id="areaChartWrap"><div class="ch-wrap"><canvas id="areaChart" role="img" aria-label="Por área"></canvas></div><div class="legend" id="areaLeg"></div></div>
+        <div id="areaResumen" style="display:none"></div>
+      </div>
+      <div class="card bar-card">
+        <div class="card-ttl">Avance ejecutado — proyectos en proceso</div>
+        <div id="barWrap" style="position:relative;width:100%">
+          <canvas id="avanceChart" role="img" aria-label="Avance por proyecto"></canvas>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:8px">
+          <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#1E8C5A;display:inline-block"></span>≥ 90%</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#1A73E8;display:inline-block"></span>50 – 89%</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3)"><span style="width:8px;height:8px;border-radius:2px;background:#C47D00;display:inline-block"></span>&lt; 50%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLA -->
+    <div class="tbl-card">
+      <div class="tbl-hdr">
+        <span class="tbl-ttl">Detalle de proyectos</span>
+        <span class="tbl-count" id="tblCount"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Estación</th><th>Servicio</th><th>Área</th><th>Estado</th>
+              <th style="text-align:center">🚦</th>
+              <th>Prog.</th><th>Ejec.</th><th>Resp. SEMMAQ</th><th>Observación</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var ALL=[], fArea='todos', fEstado='todos';
+var aChart=null, eChart=null, bChart=null;
+
+// Registrar plugin datalabels (solo afecta charts que lo declaren en plugins)
+if(typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+
+/* ======================================================
+   LOGIN — cambia SEMMAQ2024 por la clave que quieras
+====================================================== */
+var PASS = 'SEMMAQ2024';
+
+function checkLogin(){
+  var val = document.getElementById('pwdInput').value;
+  if(val === PASS){
+    sessionStorage.setItem('auth','ok');
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('uploadScreen').style.display='flex';
+    document.getElementById('loginErr').textContent='';
+  } else {
+    document.getElementById('loginErr').textContent='Contraseña incorrecta, intenta de nuevo.';
+    document.getElementById('pwdInput').value='';
+    document.getElementById('pwdInput').focus();
+  }
+}
+
+// Si ya autenticó en esta sesión, ir directo al upload
+(function(){
+  if(sessionStorage.getItem('auth')==='ok'){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('uploadScreen').style.display='flex';
+  }
+})();
+
+/* DRAG DROP */
+var dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('dragover')});
+dz.addEventListener('dragleave',function(){dz.classList.remove('dragover')});
+dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('dragover');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0])});
+
+/* LOAD */
+function loadFile(file){
+  var r=new FileReader();
+  r.onload=function(e){
+    var wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    parseData(XLSX.utils.sheet_to_json(ws,{header:1,raw:false}));
+  };
+  r.readAsBinaryString(file);
+}
+
+function parseData(raw){
+  ALL=[];
+  var fecha='', hrow=-1;
+  for(var i=0;i<raw.length;i++){
+    var r=raw[i];
+    if(r[0]&&String(r[0]).toUpperCase().indexOf('FECHA')>=0) fecha=r[1]?String(r[1]).substring(0,10):'';
+    if(r[0]&&String(r[0]).toUpperCase()==='ITEM'){hrow=i;break}
+  }
+  var fd=fecha;
+  try{var p=fecha.split('-');if(p.length===3){var m=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];fd=p[2]+' '+m[parseInt(p[1])-1]+' '+p[0];}}catch(e){}
+  document.getElementById('fechaChip').textContent=fd||'Sin fecha';
+  if(hrow===-1){alert('No se encontró la cabecera ITEM.');return;}
+
+  for(var i=hrow+1;i<raw.length;i++){
+    var r=raw[i];
+    if(!r[0]||isNaN(parseInt(r[0])))continue;
+
+    // Porcentajes: el Excel guarda 0.93 para 93%
+    // parseFloat retorna 0.93 → ×100 = 93. Correcto.
+    // Si por alguna razón ya viene como "93" → >1 → dividir entre 100
+    var prog=r[8]!==undefined&&r[8]!==''?parseFloat(r[8]):null;
+    var ejec=r[9]!==undefined&&r[9]!==''?parseFloat(r[9]):null;
+    if(prog!==null&&prog>1.0001)prog=prog/100;
+    if(ejec!==null&&ejec>1.0001)ejec=ejec/100;
+
+    var area=String(r[4]||'').trim().toUpperCase();
+    if(area.indexOf('INFRA')>=0)area='INFRAESTRUCTURA';
+
+    var estado=String(r[5]||'').trim().toUpperCase();
+    if(estado.indexOf('PLANIF')>=0)estado='PLANIFICACIÓN';
+
+    ALL.push({
+      n:parseInt(r[0]),
+      est:String(r[2]||'').trim(),
+      srv:String(r[3]||'').trim(),
+      area:area,
+      estado:estado,
+      prog:prog,
+      ejec:ejec,
+      resp_s:String(r[12]||'').trim(),
+      obs:String(r[13]||'').trim()
+    });
+  }
+  if(!ALL.length){alert('No se encontraron proyectos.');return;}
+  fArea='todos';fEstado='todos';
+  resetPills();
+  renderAll();
+  document.getElementById('uploadScreen').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+}
+
+/* FILTER */
+function filtered(){
+  return ALL.filter(function(d){
+    var aOk=fArea==='todos'||d.area===fArea;
+    var eOk=fEstado==='todos'||d.estado===fEstado;
+    return aOk&&eOk;
+  });
+}
+function setFilter(type,val,el){
+  if(type==='area'){
+    fArea=val;
+    document.querySelectorAll('#areaGroup .pill').forEach(function(p){p.classList.remove('active')});
+  } else {
+    fEstado=val;
+    document.querySelectorAll('#estadoGroup .pill').forEach(function(p){p.classList.remove('active')});
+  }
+  el.classList.add('active');
+  renderAll();
+}
+function resetPills(){
+  document.querySelectorAll('#areaGroup .pill').forEach(function(p,i){p.classList.toggle('active',i===0)});
+  document.querySelectorAll('#estadoGroup .pill').forEach(function(p,i){p.classList.toggle('active',i===0)});
+}
+
+/* SEMÁFORO
+   desfase = prog - ejec (ambos 0-1)
+   TERMINADO       → verde siempre
+   PLANIFICACIÓN / sin datos → gris
+   desfase = 0     → verde
+   0 < desfase ≤ 0.04 → amarillo (1-4%)
+   desfase > 0.04  → rojo (≥5%)
+   STAND BY        → rojo siempre
+*/
+function getSem(d){
+  if(d.estado==='TERMINADO') return 'v';
+  if(d.estado==='STAND BY'||d.estado==='PLANIFICACIÓN'||d.prog===null||d.ejec===null) return null;
+  var des=Math.round((d.prog-d.ejec)*10000)/10000;
+  if(des<=0) return 'v';
+  if(des<=0.04) return 'a';
+  return 'r';
+}
+function semCircle(s){
+  if(!s) return '<span style="color:var(--text3);font-size:11px">—</span>';
+  var map={v:'sem-v',a:'sem-a',r:'sem-r'};
+  return '<span class="sem '+map[s]+'"></span>';
+}
+
+/* RENDER ALL */
+function renderAll(){
+  var data=filtered();
+  renderMetrics(data);
+  renderSemaforo(data);
+  renderCharts(data);
+  renderTable(data);
+}
+
+/* MÉTRICAS */
+function renderMetrics(data){
+  var t=data.length;
+  var done=data.filter(function(d){return d.estado==='TERMINADO'}).length;
+  var proc=data.filter(function(d){return d.estado==='EN PROCESO'}).length;
+  var plan=data.filter(function(d){return d.estado==='PLANIFICACIÓN'}).length;
+  var sb=data.filter(function(d){return d.estado==='STAND BY'}).length;
+  document.getElementById('m0').textContent=t;
+  document.getElementById('m1').textContent=done;
+  document.getElementById('m2').textContent=proc;
+  document.getElementById('m3').textContent=plan;
+  document.getElementById('m4').textContent=sb;
+  document.getElementById('m1s').textContent=t?Math.round(done/t*100)+'% del filtro':'—';
+  document.getElementById('m2s').textContent=t?Math.round(proc/t*100)+'% del filtro':'—';
+  document.getElementById('m3s').textContent=t?Math.round(plan/t*100)+'% del filtro':'—';
+}
+
+/* SEMÁFORO PANEL */
+function renderSemaforo(data){
+  var v=0,a=0,r=0;
+  data.forEach(function(d){
+    var s=getSem(d);
+    if(s==='v')v++; else if(s==='a')a++; else if(s==='r')r++;
+  });
+  document.getElementById('s-verde').textContent=v;
+  document.getElementById('s-amarillo').textContent=a;
+  document.getElementById('s-rojo').textContent=r;
+}
+
+/* CHARTS */
+function renderCharts(data){
+  var glpN=data.filter(function(d){return d.area==='GLP'}).length;
+  var infN=data.filter(function(d){return d.area==='INFRAESTRUCTURA'}).length;
+
+  var aChartWrap=document.getElementById('areaChartWrap');
+  var aResumen=document.getElementById('areaResumen');
+  var aCardTtl=document.getElementById('areaCardTtl');
+
+  if(fArea==='todos'){
+    // Dona normal de área
+    aChartWrap.style.display='';
+    aResumen.style.display='none';
+    aCardTtl.textContent='Por área';
+    if(aChart)aChart.destroy();
+    aChart=new Chart(document.getElementById('areaChart'),{
+      type:'doughnut',
+      data:{labels:['GLP','Infraestructura'],datasets:[{data:[glpN,infN],backgroundColor:['#6B3FA0','#0E7C7B'],borderWidth:0,hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.raw}}}}}
+    });
+    document.getElementById('areaLeg').innerHTML=
+      '<span class="leg-item"><span class="leg-dot" style="background:#6B3FA0"></span>GLP '+glpN+'</span>'+
+      '<span class="leg-item"><span class="leg-dot" style="background:#0E7C7B"></span>Infra '+infN+'</span>';
+  } else {
+    // Resumen de área filtrada
+    if(aChart){aChart.destroy();aChart=null;}
+    aChartWrap.style.display='none';
+    aResumen.style.display='';
+    aCardTtl.textContent='Área seleccionada';
+    var aCol=fArea==='GLP'?'#6B3FA0':'#0E7C7B';
+    var aBg=fArea==='GLP'?'#F2ECFF':'#E6F7F7';
+    var aIcon=fArea==='GLP'?'⛽':'🏗';
+    var aTotal=ALL.filter(function(d){return d.area===fArea}).length;
+    var aFiltN=data.length;
+    var estadoLabel=fEstado==='todos'?'todos los estados':fEstado.toLowerCase();
+    aResumen.innerHTML=
+      '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:160px;gap:10px">'+
+        '<div style="width:64px;height:64px;border-radius:50%;background:'+aBg+';display:flex;align-items:center;justify-content:center;font-size:28px">'+aIcon+'</div>'+
+        '<div style="text-align:center">'+
+          '<div style="font-size:36px;font-weight:300;color:'+aCol+';line-height:1">'+aFiltN+'</div>'+
+          '<div style="font-size:12px;font-weight:600;color:'+aCol+';margin-top:2px">'+fArea+'</div>'+
+          '<div style="font-size:10px;color:var(--text3);margin-top:4px">'+estadoLabel+'</div>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--text2);background:var(--bg3);padding:3px 12px;border-radius:20px">'+aTotal+' en total</div>'+
+      '</div>';
+  }
+
+  // Segundo panel: dona de estado solo cuando filtro es "todos"
+  // Si hay filtro de estado específico → no mostrar nada (ya se ve en semáforo y métricas)
+  var done=ALL.filter(function(d){return d.estado==='TERMINADO'&&(fArea==='todos'||d.area===fArea)}).length;
+  var proc=ALL.filter(function(d){return d.estado==='EN PROCESO'&&(fArea==='todos'||d.area===fArea)}).length;
+  var plan=ALL.filter(function(d){return d.estado==='PLANIFICACIÓN'&&(fArea==='todos'||d.area===fArea)}).length;
+  var sb  =ALL.filter(function(d){return d.estado==='STAND BY'&&(fArea==='todos'||d.area===fArea)}).length;
+
+  // Barra: siempre muestra EN PROCESO del filtro actual
+  var enProc=data.filter(function(d){return d.estado==='EN PROCESO'&&d.ejec!==null});
+  var labels=enProc.map(function(d){return d.est});
+  var values=enProc.map(function(d){return Math.round((d.ejec||0)*100)});
+  var colors=values.map(function(v){return v>=90?'#1E8C5A':v>=50?'#1A73E8':'#C47D00'});
+
+  var barH=Math.max(160,enProc.length*34+60);
+  var wrap=document.getElementById('barWrap');
+  wrap.style.height=barH+'px';
+  // Recrear canvas limpio
+  wrap.innerHTML='<canvas id="avanceChart" role="img" aria-label="Avance ejecutado"></canvas>';
+
+  if(!enProc.length){
+    wrap.innerHTML='<p class="empty-msg">Sin proyectos en proceso con el filtro actual</p>';
+    return;
+  }
+  if(bChart)bChart.destroy();
+  // Registrar plugin datalabels solo para este chart
+  bChart=new Chart(document.getElementById('avanceChart'),{
+    type:'bar',
+    data:{labels:labels,datasets:[{data:values,backgroundColor:colors,borderRadius:4,borderSkipped:false}]},
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      scales:{
+        x:{min:0,max:100,grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#9AA3BF',font:{size:10},callback:function(v){return v+'%'}}},
+        y:{grid:{display:false},ticks:{color:'#5A6380',font:{size:10,family:'Inter'}}}
+      },
+      plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:function(c){return ' Ejecutado: '+c.raw+'%'}}}}
+    }
+  });
+}
+
+/* TABLA */
+function renderTable(data){
+  document.getElementById('tblCount').textContent=data.length+' proyecto'+(data.length!==1?'s':'');
+  function bEst(e){
+    if(e==='TERMINADO')    return '<span class="bdg b-done">Terminado</span>';
+    if(e==='EN PROCESO')   return '<span class="bdg b-proc">En proceso</span>';
+    if(e==='PLANIFICACIÓN')return '<span class="bdg b-plan">Planificación</span>';
+    if(e==='STAND BY')     return '<span class="bdg b-sb">Stand by</span>';
+    return '<span class="bdg">'+e+'</span>';
+  }
+  function bArea(a){
+    return a==='GLP'?'<span class="bdg b-glp">GLP</span>':'<span class="bdg b-inf">Infraestructura</span>';
+  }
+  document.getElementById('tbody').innerHTML=data.map(function(r,i){
+    var s=getSem(r);
+    return '<tr>'+
+      '<td class="td-num">'+(i+1)+'</td>'+
+      '<td class="td-est">'+r.est+'</td>'+
+      '<td class="td-srv" title="'+r.srv+'">'+r.srv+'</td>'+
+      '<td>'+bArea(r.area)+'</td>'+
+      '<td>'+bEst(r.estado)+'</td>'+
+      '<td style="text-align:center">'+semCircle(s)+'</td>'+
+      '<td class="td-num">'+(r.prog!==null?Math.round(r.prog*100)+'%':'—')+'</td>'+
+      '<td class="td-num">'+(r.ejec!==null?Math.round(r.ejec*100)+'%':'—')+'</td>'+
+      '<td style="font-size:11px;color:var(--text2);white-space:nowrap">'+r.resp_s+'</td>'+
+      '<td class="td-obs" title="'+r.obs+'">'+(r.obs||'—')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+/* RESET */
+function resetDashboard(){
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('uploadScreen').style.display='flex';
+  document.getElementById('fileInput').value='';
+  ALL=[];fArea='todos';fEstado='todos';
+}
+</script>
+</body>
+</html>
