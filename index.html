@@ -279,7 +279,7 @@ tbody td{padding:8px 12px;vertical-align:middle}
             <tr>
               <th>#</th><th>Estación</th><th>Servicio</th><th>Área</th><th>Estado</th>
               <th style="text-align:center">🚦</th>
-              <th>Prog.</th><th>Ejec.</th><th>Resp. SEMMAQ</th><th>Observación</th>
+              <th>Inicio</th><th>Fin</th><th>Prog.</th><th>Ejec.</th><th>Resp. SEMMAQ</th><th>Observación</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -371,6 +371,17 @@ function parseData(raw){
     var estado=String(r[5]||'').trim().toUpperCase();
     if(estado.indexOf('PLANIF')>=0)estado='PLANIFICACIÓN';
 
+    // Formatear fechas dd/mm/yyyy
+    function fmtFecha(v){
+      if(!v||v==='')return '—';
+      var s=String(v).substring(0,10);
+      var p=s.split('-');
+      if(p.length===3) return p[2].padStart(2,'0')+'/'+p[1].padStart(2,'0')+'/'+p[0];
+      var p2=s.split('/');
+      if(p2.length===3) return p2[1].padStart(2,'0')+'/'+p2[0].padStart(2,'0')+'/'+p2[2];
+      return s;
+    }
+
     ALL.push({
       n:parseInt(r[0]),
       est:String(r[2]||'').trim(),
@@ -379,6 +390,8 @@ function parseData(raw){
       estado:estado,
       prog:prog,
       ejec:ejec,
+      ini:fmtFecha(r[6]),
+      fin:fmtFecha(r[7]),
       resp_s:String(r[12]||'').trim(),
       obs:String(r[13]||'').trim()
     });
@@ -584,6 +597,8 @@ function renderTable(data){
       '<td>'+bArea(r.area)+'</td>'+
       '<td>'+bEst(r.estado)+'</td>'+
       '<td style="text-align:center">'+semCircle(s)+'</td>'+
+      '<td style="font-size:11px;font-weight:600;white-space:nowrap;color:var(--text)">'+r.ini+'</td>'+
+      '<td style="font-size:11px;font-weight:600;white-space:nowrap;color:var(--text)">'+r.fin+'</td>'+
       '<td class="td-num">'+(r.prog!==null?Math.round(r.prog*100)+'%':'—')+'</td>'+
       '<td class="td-num">'+(r.ejec!==null?Math.round(r.ejec*100)+'%':'—')+'</td>'+
       '<td style="font-size:11px;color:var(--text2);white-space:nowrap">'+r.resp_s+'</td>'+
